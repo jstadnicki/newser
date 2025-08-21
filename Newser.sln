@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Newser.Api", "Newser.Api\Newser.Api.csproj", "{0F6B1447-FE1A-4B7D-916C-D0441C3CC44C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Newser.Models", "Newser.Models\Newser.Models.csproj", "{0A1E84ED-6C61-4D6A-A9E6-BE8C481CA813}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0F6B1447-FE1A-4B7D-916C-D0441C3CC44C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0F6B1447-FE1A-4B7D-916C-D0441C3CC44C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0F6B1447-FE1A-4B7D-916C-D0441C3CC44C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0F6B1447-FE1A-4B7D-916C-D0441C3CC44C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0A1E84ED-6C61-4D6A-A9E6-BE8C481CA813}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0A1E84ED-6C61-4D6A-A9E6-BE8C481CA813}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0A1E84ED-6C61-4D6A-A9E6-BE8C481CA813}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0A1E84ED-6C61-4D6A-A9E6-BE8C481CA813}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
