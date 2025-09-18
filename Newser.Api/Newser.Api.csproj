@@ -16,9 +16,12 @@
     </ItemGroup>
 
     <ItemGroup>
+    <!--
       <Reference Include="CodeHollow.FeedReader">
         <HintPath>..\..\..\..\..\.nuget\packages\codehollow.feedreader\1.2.6\lib\netcoreapp2.1\CodeHollow.FeedReader.dll</HintPath>
       </Reference>
+      -->
+      <PackageReference Include="codehollow.feedreader" Version="1.2.6"/>
     </ItemGroup>
 
   
