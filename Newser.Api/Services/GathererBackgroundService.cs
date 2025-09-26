@@ -191,7 +191,6 @@ public class GathererBackgroundService : BackgroundService
         try
         {
             using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-            _logger.LogInformation("received response...");
             using var stream = await response.Content.ReadAsStreamAsync();
             using var reader = new StreamReader(stream);
 
@@ -204,8 +203,6 @@ public class GathererBackgroundService : BackgroundService
                 {
                     if (string.IsNullOrWhiteSpace(line))
                         continue;
-
-                    _logger.LogInformation("line: " + line);
 
                     var json = JsonSerializer.Deserialize<JsonElement>(line);
                     if (json.TryGetProperty("message", out var msg) &&
