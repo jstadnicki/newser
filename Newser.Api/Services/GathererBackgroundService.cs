@@ -87,24 +87,63 @@ public class GathererBackgroundService : BackgroundService
 
     private async Task StoreSummaryAsync(MongoClient mongoClient, Article documentToProcess, string summary)
     {
-        var summaryObject = JsonSerializer.Deserialize<ArticleSummaryWithCategoryGeneratedWithLlama>(summary);
-        
-        var newsSummary = new ArticleSummary
+        try
         {
-            Link = documentToProcess.Link,
-            ParentId = documentToProcess.Id,
-            Seen = false,
-            Summary = summaryObject.Summary,
-            Categories = summaryObject.Categories,
-            Title = documentToProcess.Title,
-            Author = documentToProcess.Author,
-            PulicationDate = documentToProcess.PubDate
-        };
+            var summaryObject = JsonSerializer.Deserialize<ArticleSummaryWithCategoryGeneratedWithLlama>(summary);
 
-        var database = mongoClient.GetDatabase("news");
-        var articles = database.GetCollection<ArticleSummary>("summaries");
+            // if object was unsuccessfully summarised,
+            // just use the document title
+            if (summaryObject!.Summary == "")
+            {
+                summaryObject.Summary = documentToProcess.Title;
+            }
 
-        await articles.InsertOneAsync(newsSummary);
+            // cut off a summary that is too long, add ellipses
+            if (summaryObject.Summary.Length > 160)
+            {
+                summaryObject.Summary = summaryObject.Summary[..157] + "...";
+            }
+
+            var newsSummary = new ArticleSummary
+            {
+                Link = documentToProcess.Link,
+                ParentId = documentToProcess.Id,
+                Seen = false,
+                Summary = summaryObject!.Summary,
+                Categories = summaryObject!.Categories,
+                Title = documentToProcess.Title,
+                Author = documentToProcess.Author,
+                PulicationDate = documentToProcess.PubDate
+            };
+
+            var database = mongoClient.GetDatabase("news");
+            var articles = database.GetCollection<ArticleSummary>("summaries");
+
+            await articles.InsertOneAsync(newsSummary);
+        }
+        catch (JsonException)
+        {
+            // in case of failure,
+            // CreateSummaryAsync will often return an invalid JSON
+            // we can just state that a summary is unavailable
+
+            var newsSummary = new ArticleSummary
+            {
+                Link = documentToProcess.Link,
+                ParentId = documentToProcess.Id,
+                Seen = false,
+                Summary = "(no summary available)",
+                Categories = [],
+                Title = documentToProcess.Title,
+                Author = documentToProcess.Author,
+                PulicationDate = documentToProcess.PubDate
+            };
+
+            var database = mongoClient.GetDatabase("news");
+            var articles = database.GetCollection<ArticleSummary>("summaries");
+
+            await articles.InsertOneAsync(newsSummary);
+        }
     }
 
     private async Task<string> CreateSummaryAsync(string input)
@@ -149,35 +188,63 @@ public class GathererBackgroundService : BackgroundService
             Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
         };
 
-        using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-        using var stream = await response.Content.ReadAsStreamAsync();
-        using var reader = new StreamReader(stream);
-
-        string? line;
-        var sb = new StringBuilder();
-
-        while ((line = await reader.ReadLineAsync()) != null)
+        try
         {
-            if (string.IsNullOrWhiteSpace(line))
-                continue;
+            using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            _logger.LogInformation("received response...");
+            using var stream = await response.Content.ReadAsStreamAsync();
+            using var reader = new StreamReader(stream);
 
-            var json = JsonSerializer.Deserialize<JsonElement>(line);
-            if (json.TryGetProperty("message", out var msg) &&
-                msg.TryGetProperty("content", out var content))
+            string? line;
+            var sb = new StringBuilder();
+
+            try
             {
-                sb.Append(content.GetString());
-            }
-        }
+                while ((line = await reader.ReadLineAsync()) != null)
+                {
+                    if (string.IsNullOrWhiteSpace(line))
+                        continue;
 
-        return sb.ToString();
+                    _logger.LogInformation("line: " + line);
+
+                    var json = JsonSerializer.Deserialize<JsonElement>(line);
+                    if (json.TryGetProperty("message", out var msg) &&
+                        msg.TryGetProperty("content", out var content))
+                    {
+                        sb.Append(content.GetString());
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                // failed to parse as JSON (LLM fault)
+                return "";
+            }
+
+            // if the port is open, but the LLM isn't, there may be an error message of the type:
+            // {"error":"model [model] not found"}
+            // such case is already handled upstream
+
+            return sb.ToString();
+        }
+        catch (TaskCanceledException)
+        {
+            // cannot connect to LLM
+            return "";
+        }
+        catch (HttpRequestException)
+        {
+            // network failure
+            return "";
+        }
     }
 
     static string CleanText(string input)
     {
         return input;
-        var noHtml = Regex.Replace(input, "<.*?>", string.Empty);
-        var clean = Regex.Replace(noHtml, @"[^a-zA-Z0-9\s]", string.Empty);
-        return clean;
+        // var noHtml = Regex.Replace(input, "<.*?>", string.Empty);
+        // var clean = Regex.Replace(noHtml, @"[^a-zA-Z0-9\s]", string.Empty);
+        // return clean;
     }
 
     private async Task DownloadArticlesAsync(
@@ -225,7 +292,7 @@ public class GathererBackgroundService : BackgroundService
             Author = feedItem.Author,
             Content = feedItem.Content,
             ContentSnippet = feedItem.Description,
-            PubDate = feedItem.PublishingDate.HasValue ? feedItem.PublishingDate.Value : DateTime.UtcNow,
+            PubDate = feedItem.PublishingDate ?? DateTime.UtcNow,
             Title = feedItem.Title,
             Categories = feedItem.Categories,
             Processed = false,

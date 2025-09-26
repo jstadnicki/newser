@@ -21,8 +21,8 @@ public class ArticleSummary
 public class ArticleSummaryWithCategoryGeneratedWithLlama
 {
     [JsonPropertyName("summary")]
-    public string Summary { get; set; }
+    public required string Summary { get; set; }
     
     [JsonPropertyName("categories")]
-    public string[] Categories { get; set; }
+    public required string[] Categories { get; set; }
 }
